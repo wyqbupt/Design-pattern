@@ -4,6 +4,9 @@ import sys
 import io
 import os
 import tempfile
+import itertools
+import unicodedata
+
 
 BLACK, WHITE = ("BLACK", "WHITE")
 
@@ -27,6 +30,13 @@ def main():
         with open(filename, "w", encoding="utf-8") as file:
             file.write(sys.stdout.getvalue())
         print("wrote '{}'".format(filename), file=sys.__stdout__)
+
+
+def create_piece(kind, color):
+    if kind == "draught":
+        return eval("{}{}()".format(color.title(), kind.title()))
+    return eval("{}Chess{}()".format(color.title(), kind.title()))
+    # Using eval() is risky
 
 
 class AbstractBoard:
@@ -54,10 +64,10 @@ class CheckersBoard(AbstractBoard):
 
     def populate_board(self):
         for x in range(0, 9, 2):
-            for row in range(4):
-                column = x + ((row + 1) % 2)
-                self.board[row][column] = BlackDraught()
-                self.board[row + 6][column] = WhiteDraught()
+            for y in range(4):
+                column = x + ((y + 1) % 2)
+                for row, color in ((y, "black"),(y+6, "white")):
+                    self.board[row][column] = create_piece("draught", color)
 
 
 class ChessBoard(AbstractBoard):
@@ -65,27 +75,15 @@ class ChessBoard(AbstractBoard):
     def __init__(self):
         super().__init__(8, 8)
 
-
     def populate_board(self):
-        self.board[0][0] = BlackChessRook()
-        self.board[0][1] = BlackChessKnight()
-        self.board[0][2] = BlackChessBishop()
-        self.board[0][3] = BlackChessQueen()
-        self.board[0][4] = BlackChessKing()
-        self.board[0][5] = BlackChessBishop()
-        self.board[0][6] = BlackChessKnight()
-        self.board[0][7] = BlackChessRook()
-        self.board[7][0] = WhiteChessRook()
-        self.board[7][1] = WhiteChessKnight()
-        self.board[7][2] = WhiteChessBishop()
-        self.board[7][3] = WhiteChessQueen()
-        self.board[7][4] = WhiteChessKing()
-        self.board[7][5] = WhiteChessBishop()
-        self.board[7][6] = WhiteChessKnight()
-        self.board[7][7] = WhiteChessRook()
+        for row, color in ((0, "black"), (7, "white")):
+            for columns, kind in (((0, 7), "rook"), ((1, 6), "knight"),
+                    ((2, 5), "bishop"), ((3,), "queen"), ((4,), "king")):
+                for column in columns:
+                    self.board[row][column] = create_piece(kind, color)
         for column in range(8):
-            self.board[1][column] = BlackChessPawn()
-            self.board[6][column] = WhiteChessPawn()
+            for row, color in ((1, "black"), (6, "white")):
+                self.board[row][column] = create_piece("pawn", color)
 
 
 class Piece(str):
@@ -93,117 +91,19 @@ class Piece(str):
     __slots__ = ()
 
 
-class BlackDraught(Piece):
+for code in itertools.chain((0x26C0, 0x26C2), range(0x2654, 0x2660)):
+    char = chr(code)
+    name = unicodedata.name(char).title().replace(" ", "")
+    if name.endswith("sMan"):
+        name = name[:-4]
+    exec("""\
+class {}(Piece):
 
     __slots__ = ()
 
     def __new__(Class):
-        return super().__new__(Class, "\N{black draughts man}")
-
-
-class WhiteDraught(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{white draughts man}")
-
-
-class BlackChessKing(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{black chess king}")
-
-
-class WhiteChessKing(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{white chess king}")
-
-
-class BlackChessQueen(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{black chess queen}")
-
-
-class WhiteChessQueen(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{white chess queen}")
-
-
-class BlackChessRook(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{black chess rook}")
-
-
-class WhiteChessRook(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{white chess rook}")
-
-
-class BlackChessBishop(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{black chess bishop}")
-
-
-class WhiteChessBishop(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{white chess bishop}")
-
-
-class BlackChessKnight(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{black chess knight}")
-
-
-class WhiteChessKnight(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{white chess knight}")
-
-
-class BlackChessPawn(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{black chess pawn}")
-
-
-class WhiteChessPawn(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "\N{white chess pawn}")
-
+        return super().__new__(Class, "{}")""".format(name, char))
+    # Using exec() is risky
 
 if __name__ == "__main__":
     main()
