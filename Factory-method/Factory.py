@@ -8,6 +8,8 @@ import itertools
 import unicodedata
 
 
+DRAUGHT, PAWN, ROOK, KNIGHT, BISHOP, KING, QUEEN = ("DRAUGHT", "PAWN",
+        "ROOK", "KNIGHT", "BISHOP", "KING", "QUEEN")
 BLACK, WHITE = ("BLACK", "WHITE")
 
 if sys.platform.startswith("win"):
@@ -17,6 +19,12 @@ if sys.platform.startswith("win"):
 else:
     def console(char, background):
         return "\x1B[{}m{}\x1B[0m".format(43 if background == BLACK else 47, char or " ")
+
+
+def make_new_method(char): # Needed to create a fresh method each time
+    def new(Class): # Can't use super() or super(Piece, Class)
+        return Piece.__new__(Class, char)
+    return new
 
 
 def main():
@@ -32,17 +40,46 @@ def main():
         print("wrote '{}'".format(filename), file=sys.__stdout__)
 
 
-def create_piece(kind, color):
-    if kind == "draught":
-        return eval("{}{}()".format(color.title(), kind.title()))
-    return eval("{}Chess{}()".format(color.title(), kind.title()))
-    # Using eval() is risky
+class Piece(str):
+
+    __slots__ = ()
+
+
+for code in itertools.chain((0x26C0, 0x26C2), range(0x2654, 0x2660)):
+    char = chr(code)
+    name = unicodedata.name(char).title().replace(" ", "")
+    if name.endswith("sMan"):
+        name = name[:-4]
+
+    new = make_new_method(char)
+    print(new)
+    Class = type(name, (Piece,), dict(__slots__=(), __new__=new))
+    setattr(sys.modules[__name__], name, Class) # Can be done better!
 
 
 class AbstractBoard:
+
+    __classForPiece = {(DRAUGHT, BLACK): BlackDraught,
+            (PAWN, BLACK): BlackChessPawn,
+            (ROOK, BLACK): BlackChessRook,
+            (KNIGHT, BLACK): BlackChessKnight,
+            (BISHOP, BLACK): BlackChessBishop,
+            (KING, BLACK): BlackChessKing,
+            (QUEEN, BLACK): BlackChessQueen,
+            (DRAUGHT, WHITE): WhiteDraught,
+            (PAWN, WHITE): WhiteChessPawn,
+            (ROOK, WHITE): WhiteChessRook,
+            (KNIGHT, WHITE): WhiteChessKnight,
+            (BISHOP, WHITE): WhiteChessBishop,
+            (KING, WHITE): WhiteChessKing,
+            (QUEEN, WHITE): WhiteChessQueen}
+
     def __init__(self, rows, columns):
         self.board = [[None for _ in range(columns)] for _ in range(rows)]
         self.populate_board()
+
+    def create_piece(self, kind, color):
+        return AbstractBoard.__classForPiece[kind, color]()
 
     def populate_board(self):
         raise NotImplementedError()
@@ -66,8 +103,8 @@ class CheckersBoard(AbstractBoard):
         for x in range(0, 9, 2):
             for y in range(4):
                 column = x + ((y + 1) % 2)
-                for row, color in ((y, "black"),(y+6, "white")):
-                    self.board[row][column] = create_piece("draught", color)
+                for row, color in ((y, BLACK), (y+6, WHITE)):
+                    self.board[row][column] = self.create_piece(DRAUGHT, color)
 
 
 class ChessBoard(AbstractBoard):
@@ -76,34 +113,15 @@ class ChessBoard(AbstractBoard):
         super().__init__(8, 8)
 
     def populate_board(self):
-        for row, color in ((0, "black"), (7, "white")):
-            for columns, kind in (((0, 7), "rook"), ((1, 6), "knight"),
-                    ((2, 5), "bishop"), ((3,), "queen"), ((4,), "king")):
+        for row, color in ((0, BLACK), (7, WHITE)):
+            for columns, kind in (((0, 7), ROOK), ((1, 6), KNIGHT),
+                    ((2, 5), BISHOP), ((3,), QUEEN), ((4,), KING)):
                 for column in columns:
-                    self.board[row][column] = create_piece(kind, color)
+                    self.board[row][column] = self.create_piece(kind, color)
         for column in range(8):
-            for row, color in ((1, "black"), (6, "white")):
-                self.board[row][column] = create_piece("pawn", color)
+            for row, color in ((1, BLACK), (6, WHITE)):
+                self.board[row][column] = self.create_piece(PAWN, color)
 
-
-class Piece(str):
-
-    __slots__ = ()
-
-
-for code in itertools.chain((0x26C0, 0x26C2), range(0x2654, 0x2660)):
-    char = chr(code)
-    name = unicodedata.name(char).title().replace(" ", "")
-    if name.endswith("sMan"):
-        name = name[:-4]
-    exec("""\
-class {}(Piece):
-
-    __slots__ = ()
-
-    def __new__(Class):
-        return super().__new__(Class, "{}")""".format(name, char))
-    # Using exec() is risky
 
 if __name__ == "__main__":
     main()
