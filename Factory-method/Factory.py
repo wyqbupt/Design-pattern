@@ -50,11 +50,18 @@ for code in itertools.chain((0x26C0, 0x26C2), range(0x2654, 0x2660)):
     name = unicodedata.name(char).title().replace(" ", "")
     if name.endswith("sMan"):
         name = name[:-4]
-
-    new = make_new_method(char)
-    print(new)
+    new = (lambda char: lambda Class: Piece.__new__(Class, char))(char)
+    new.__name__ = "__new__"
     Class = type(name, (Piece,), dict(__slots__=(), __new__=new))
-    setattr(sys.modules[__name__], name, Class) # Can be done better!
+    globals()[name] = Class
+
+
+def create_piece(kind, color):
+    color = "White" if color == WHITE else "Black"
+    name = {DRAUGHT: "Draught", PAWN: "ChessPawn", ROOK: "ChessRook",
+            KNIGHT: "ChessKnight", BISHOP: "ChessBishop",
+            KING: "ChessKing", QUEEN: "ChessQueen"}[kind]
+    return globals()[color + name]()
 
 
 class AbstractBoard:
@@ -78,9 +85,6 @@ class AbstractBoard:
         self.board = [[None for _ in range(columns)] for _ in range(rows)]
         self.populate_board()
 
-    def create_piece(self, kind, color):
-        return AbstractBoard.__classForPiece[kind, color]()
-
     def populate_board(self):
         raise NotImplementedError()
 
@@ -99,12 +103,18 @@ class CheckersBoard(AbstractBoard):
     def __init__(self):
         super().__init__(10, 10)
 
-    def populate_board(self):
-        for x in range(0, 9, 2):
-            for y in range(4):
-                column = x + ((y + 1) % 2)
-                for row, color in ((y, BLACK), (y+6, WHITE)):
-                    self.board[row][column] = self.create_piece(DRAUGHT, color)
+    def populate_board(self): # Thanks to Doug Hellmann for the idea!
+        def black():
+            return create_piece(DRAUGHT, BLACK)
+        def white():
+            return create_piece(DRAUGHT, WHITE)
+        rows = ((None, black()), (black(), None), (None, black()),
+                (black(), None),            # 4 black rows
+                (None, None), (None, None), # 2 blank rows
+                (None, white()), (white(), None), (None, white()),
+                (white(), None))            # 4 white rows
+        self.board = [list(itertools.islice(
+            itertools.cycle(squares), 0, len(rows))) for squares in rows]
 
 
 class ChessBoard(AbstractBoard):
@@ -117,10 +127,10 @@ class ChessBoard(AbstractBoard):
             for columns, kind in (((0, 7), ROOK), ((1, 6), KNIGHT),
                     ((2, 5), BISHOP), ((3,), QUEEN), ((4,), KING)):
                 for column in columns:
-                    self.board[row][column] = self.create_piece(kind, color)
+                    self.board[row][column] = create_piece(kind, color)
         for column in range(8):
             for row, color in ((1, BLACK), (6, WHITE)):
-                self.board[row][column] = self.create_piece(PAWN, color)
+                self.board[row][column] = create_piece(PAWN, color)
 
 
 if __name__ == "__main__":
