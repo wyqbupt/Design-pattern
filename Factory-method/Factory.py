@@ -19,6 +19,9 @@ else:
 def main():
     checker = CheckersBoard()
     print(checker)
+
+    chess = ChessBoard()
+    print(chess)
     if sys.platform.startswith("win"):
         filename = os.path.join(tempfile.gettempdir(), "gameboard.txt")
         with open(filename, "w", encoding="utf-8") as file:
@@ -57,6 +60,34 @@ class CheckersBoard(AbstractBoard):
                 self.board[row + 6][column] = WhiteDraught()
 
 
+class ChessBoard(AbstractBoard):
+
+    def __init__(self):
+        super().__init__(8, 8)
+
+
+    def populate_board(self):
+        self.board[0][0] = BlackChessRook()
+        self.board[0][1] = BlackChessKnight()
+        self.board[0][2] = BlackChessBishop()
+        self.board[0][3] = BlackChessQueen()
+        self.board[0][4] = BlackChessKing()
+        self.board[0][5] = BlackChessBishop()
+        self.board[0][6] = BlackChessKnight()
+        self.board[0][7] = BlackChessRook()
+        self.board[7][0] = WhiteChessRook()
+        self.board[7][1] = WhiteChessKnight()
+        self.board[7][2] = WhiteChessBishop()
+        self.board[7][3] = WhiteChessQueen()
+        self.board[7][4] = WhiteChessKing()
+        self.board[7][5] = WhiteChessBishop()
+        self.board[7][6] = WhiteChessKnight()
+        self.board[7][7] = WhiteChessRook()
+        for column in range(8):
+            self.board[1][column] = BlackChessPawn()
+            self.board[6][column] = WhiteChessPawn()
+
+
 class Piece(str):
 
     __slots__ = ()
@@ -76,6 +107,103 @@ class WhiteDraught(Piece):
 
     def __new__(Class):
         return super().__new__(Class, "\N{white draughts man}")
+
+
+class BlackChessKing(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{black chess king}")
+
+
+class WhiteChessKing(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{white chess king}")
+
+
+class BlackChessQueen(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{black chess queen}")
+
+
+class WhiteChessQueen(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{white chess queen}")
+
+
+class BlackChessRook(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{black chess rook}")
+
+
+class WhiteChessRook(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{white chess rook}")
+
+
+class BlackChessBishop(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{black chess bishop}")
+
+
+class WhiteChessBishop(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{white chess bishop}")
+
+
+class BlackChessKnight(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{black chess knight}")
+
+
+class WhiteChessKnight(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{white chess knight}")
+
+
+class BlackChessPawn(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{black chess pawn}")
+
+
+class WhiteChessPawn(Piece):
+
+    __slots__ = ()
+
+    def __new__(Class):
+        return super().__new__(Class, "\N{white chess pawn}")
+
 
 if __name__ == "__main__":
     main()
