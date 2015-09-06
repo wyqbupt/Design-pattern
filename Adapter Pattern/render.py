@@ -4,8 +4,11 @@ import textwrap
 import abc
 import collections
 
+if sys.version_info[:2] < (3, 2):
+    from xml.sax.saxutils import escape
+else:
+    from html import escape
 
-# Thanks to Nick Coghlan for these!
 if sys.version_info[:2] >= (3, 3):
     class Renderer(metaclass=abc.ABCMeta):
 
@@ -73,6 +76,49 @@ class TextRenderer:
         pass
 
 
+class HtmlWriter:
+
+    def __init__(self, file=sys.stdout):
+        self.file = file
+
+    def header(self):
+        self.file.write("<!doctype html>\n<html>\n")
+
+    def title(self, title):
+        self.file.write("<head><title>{}</title></head>\n".format(
+                escape(title)))
+
+    def start_body(self):
+        self.file.write("<body>\n")
+
+    def body(self, text):
+        self.file.write("<p>{}</p>\n".format(escape(text)))
+
+    def end_body(self):
+        self.file.write("</body>\n")
+
+    def footer(self):
+        self.file.write("</html>\n")
+
+
+class HtmlRenderer:
+
+    def __init__(self, htmlWriter):
+        self.htmlWriter = htmlWriter
+
+    def header(self, title):
+        self.htmlWriter.header()
+        self.htmlWriter.title(title)
+        self.htmlWriter.start_body()
+
+    def paragraph(self, text):
+        self.htmlWriter.body(text)
+
+    def footer(self):
+        self.htmlWriter.end_body()
+        self.htmlWriter.footer()
+
+
 MESSAGE = """This is a very short {} paragraph that demonstrates
 the simple {} class."""
 
@@ -86,8 +132,23 @@ def main():
     textPage.add_paragraph(paragraph1)
     textPage.add_paragraph(paragraph2)
     textPage.render()
+
     print()
 
+    paragraph1 = MESSAGE.format("HTML", "HtmlRenderer")
+    title = "HTML"
+    file = sys.stdout
+    htmlPage = Page(title, HtmlRenderer(HtmlWriter(file)))
+    htmlPage.add_paragraph(paragraph1)
+    htmlPage.add_paragraph(paragraph2)
+    htmlPage.render()
+
+    try:
+        page = Page(title, HtmlWriter())
+        page.render()
+        print("ERROR! rendering with an invalid renderer")
+    except TypeError as err:
+        print(err)
 
 if __name__ == "__main__":
     main()
